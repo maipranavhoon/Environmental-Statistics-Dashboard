@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco Track</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --text: #f8fafc;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, var(--accent-green), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        select, button, input {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-green);
+            transform: translateY(-2px);
+        }
+
+        .overall-balance-container {
+            margin-bottom: 2.5rem;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .balance-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .balance-track {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
+        #balanceFill {
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-red));
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Pie Charts Row */
+        .pie-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        .pie-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pie-card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .pie-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .pie-canvas-box {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            flex-shrink: 0;
+        }
+
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .pie-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .pie-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .pie-legend-label {
+            color: #cbd5e1;
+            flex: 1;
+        }
+
+        .pie-legend-value {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        @media (max-width: 600px) {
+            .pie-section { grid-template-columns: 1fr; }
+            .pie-canvas-box { width: 130px; height: 130px; }
+        }
+
+        /* Dashboard cards */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            cursor: pointer;
+            min-height: 200px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-green);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .category-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 5px 0;
+            display: block;
+        }
+
+        .stat-desc {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 0;
+            opacity: 0;
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+
+        .card.active {
+            grid-row: span 2;
+        }
+
+        .card.active .chart-container {
+            height: 150px;
+            opacity: 1;
+            margin-top: 15px;
+        }
+
+        #adminPanel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            width: 400px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 99;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-in forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>Eco Track</h1>
+            <p style="color: var(--accent-green)">Interactive Intelligence Dashboard</p>
+        </div>
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <select id="filterCategory" onchange="filterCards()">
+                <option value="all">All Indicators</option>
+                <option value="climate">Climate</option>
+                <option value="pollution">Pollution</option>
+                <option value="nature">Nature</option>
+            </select>
+            <button onclick="toggleAdmin()">Update Data</button>
+        </div>
+    </header>
+
+    <div class="overall-balance-container glass-panel">
+        <div class="balance-label">
+            <span style="color: var(--accent-green)">Healthy Environment</span>
+            <span id="balanceStatus" style="color: var(--text)">Calculating Index...</span>
+            <span style="color: var(--accent-red)">Hazardous Environment</span>
+        </div>
+        <div class="balance-track">
+            <div id="balanceFill"></div>
+        </div>
+    </div>
+
+    <!-- Pie Charts -->
+    <div class="pie-section">
+        <div class="glass-panel pie-card">
+            <h3>Impact by Category</h3>
+            <div class="pie-wrapper">
+                <div class="pie-canvas-box">
+                    <canvas id="categoryPie"></canvas>
+                </div>
+                <div class="pie-legend" id="categoryLegend"></div>
+            </div>
+        </div>
+        <div class="glass-panel pie-card">
+            <h3>Stress Level per Indicator</h3>
+            <div class="pie-wrapper">
+                <div class="pie-canvas-box">
+                    <canvas id="indicatorPie"></canvas>
+                </div>
+                <div class="pie-legend" id="indicatorLegend"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" id="mainGrid"></div>
+
+    <div class="overlay" id="overlay" onclick="toggleAdmin()"></div>
+    <div class="glass-panel" id="adminPanel">
+        <h3 style="margin-bottom:1rem">Manual Data Entry</h3>
+        <select id="updateTarget" style="width:100%; margin-bottom:1rem"></select>
+        <input type="number" id="newValue" placeholder="Enter numeric value" style="width:100%; margin-bottom:1rem">
+        <input type="text" id="newUnit" placeholder="Unit (e.g. ppm, °C)" style="width:100%; margin-bottom:1rem">
+        <button onclick="saveData()" style="width:100%">Update & Refresh</button>
+    </div>
+
+    <script>
+        let envData = [
+            { id: 0, cat: 'climate',   title: 'Atmospheric CO₂',  val: 419.2, unit: 'ppm',     desc: 'Current global concentration of carbon dioxide.',         color: '#ef4444', history: [415, 416, 417, 418, 419.2], max: 500 },
+            { id: 1, cat: 'climate',   title: 'Global Temp Rise',  val: 1.15,  unit: '°C',      desc: 'Temperature increase relative to 1850 levels.',           color: '#f59e0b', history: [0.9, 1.0, 1.1, 1.12, 1.15], max: 2.5 },
+            { id: 2, cat: 'nature',    title: 'Forest Loss',       val: 10,    unit: 'M ha/yr', desc: 'Annual deforestation rate in tropical regions.',           color: '#10b981', history: [12, 11.5, 11, 10.5, 10],    max: 20 },
+            { id: 3, cat: 'pollution', title: 'Ocean Plastic',     val: 11,    unit: 'M tons',  desc: 'Plastic waste entering oceans annually.',                  color: '#3b82f6', history: [8, 9, 9.5, 10, 11],          max: 30 },
+            { id: 4, cat: 'pollution', title: 'Air Quality (Avg)', val: 45,    unit: 'AQI',     desc: 'Global average air quality index score.',                  color: '#8b5cf6', history: [55, 52, 50, 48, 45],          max: 150 },
+            { id: 5, cat: 'nature',    title: 'Species at Risk',   val: 1,     unit: 'Million', desc: 'Species currently threatened with extinction.',            color: '#ec4899', history: [0.7, 0.8, 0.9, 0.95, 1],     max: 2 }
+        ];
+
+        let activeCharts = {};
+        let categoryPieChart = null;
+        let indicatorPieChart = null;
+
+        function initDashboard() {
+            renderCards(envData);
+            populateAdminList();
+            updateOverallBalance();
+            renderPieCharts();
+        }
+
+        function updateOverallBalance() {
+            let totalRatio = 0;
+            envData.forEach(item => { totalRatio += (item.val / item.max); });
+            let averageStress = (totalRatio / envData.length) * 100;
+            document.getElementById('balanceFill').style.width = Math.min(averageStress, 100) + '%';
+            document.getElementById('balanceStatus').innerText = `Impact Level: ${Math.round(averageStress)}%`;
+        }
+
+        function renderPieCharts() {
+            renderCategoryPie();
+            renderIndicatorPie();
+        }
+
+        function renderCategoryPie() {
+            // Group stress ratios by category
+            const cats = {};
+            envData.forEach(item => {
+                if (!cats[item.cat]) cats[item.cat] = { total: 0, color: null };
+                cats[item.cat].total += (item.val / item.max) * 100;
+            });
+
+            const catColors = { climate: '#f59e0b', pollution: '#8b5cf6', nature: '#10b981' };
+            const labels = Object.keys(cats);
+            const data   = labels.map(k => parseFloat(cats[k].total.toFixed(1)));
+            const colors = labels.map(k => catColors[k] || '#94a3b8');
+
+            if (categoryPieChart) categoryPieChart.destroy();
+
+            const ctx = document.getElementById('categoryPie').getContext('2d');
+            categoryPieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: colors.map(c => c + 'cc'),
+                        borderColor: colors,
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: { legend: { display: false }, tooltip: {
+                        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` }
+                    }}
+                }
+            });
+
+            // Build custom legend
+            const legend = document.getElementById('categoryLegend');
+            const total  = data.reduce((a, b) => a + b, 0);
+            legend.innerHTML = labels.map((l, i) => `
+                <div class="pie-legend-item">
+                    <div class="pie-legend-dot" style="background:${colors[i]}"></div>
+                    <span class="pie-legend-label" style="text-transform:capitalize">${l}</span>
+                    <span class="pie-legend-value">${((data[i]/total)*100).toFixed(0)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function renderIndicatorPie() {
+            const labels = envData.map(i => i.title);
+            const data   = envData.map(i => parseFloat(((i.val / i.max) * 100).toFixed(1)));
+            const colors = envData.map(i => i.color);
+
+            if (indicatorPieChart) indicatorPieChart.destroy();
+
+            const ctx = document.getElementById('indicatorPie').getContext('2d');
+            indicatorPieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: colors.map(c => c + 'cc'),
+                        borderColor: colors,
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: { legend: { display: false }, tooltip: {
+                        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` }
+                    }}
+                }
+            });
+
+            // Custom legend — abbreviate long titles
+            const legend = document.getElementById('indicatorLegend');
+            const total  = data.reduce((a, b) => a + b, 0);
+            const short  = ['CO₂', 'Temp', 'Forest', 'Plastic', 'AQI', 'Species'];
+            legend.innerHTML = envData.map((item, i) => `
+                <div class="pie-legend-item">
+                    <div class="pie-legend-dot" style="background:${colors[i]}"></div>
+                    <span class="pie-legend-label">${short[i] || item.title}</span>
+                    <span class="pie-legend-value">${((data[i]/total)*100).toFixed(0)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function renderCards(data) {
+            const grid = document.getElementById('mainGrid');
+            grid.innerHTML = '';
+            data.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'glass-panel card fade-in';
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.onclick = () => toggleGraph(card, item);
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="category-tag">${item.cat}</span>
+                        <div style="width:10px;height:10px;border-radius:50%;background:${item.color};box-shadow:0 0 10px ${item.color}"></div>
+                    </div>
+                    <h3 style="color:#cbd5e1;font-size:0.9rem">${item.title}</h3>
+                    <span class="stat-value" style="color:${item.color}">${item.val} <small style="font-size:1rem">${item.unit}</small></span>
+                    <p class="stat-desc">${item.desc}</p>
+                    <div class="chart-container">
+                        <canvas id="chart-${item.id}"></canvas>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleGraph(card, item) {
+            const isOpening = !card.classList.contains('active');
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            if (isOpening) {
+                card.classList.add('active');
+                setTimeout(() => createChart(item), 100);
+            }
+        }
+
+        function createChart(item) {
+            const ctx = document.getElementById(`chart-${item.id}`).getContext('2d');
+            if (activeCharts[item.id]) activeCharts[item.id].destroy();
+            activeCharts[item.id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['2022', '2023', '2024', '2025', '2026'],
+                    datasets: [{
+                        label: item.title,
+                        data: item.history,
+                        borderColor: item.color,
+                        backgroundColor: item.color + '22',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { display: false },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function filterCards() {
+            const val = document.getElementById('filterCategory').value;
+            const filtered = val === 'all' ? envData : envData.filter(i => i.cat === val);
+            renderCards(filtered);
+        }
+
+        function toggleAdmin() {
+            const panel = document.getElementById('adminPanel');
+            const overlay = document.getElementById('overlay');
+            const isVisible = panel.style.display === 'block';
+            panel.style.display = isVisible ? 'none' : 'block';
+            overlay.style.display = isVisible ? 'none' : 'block';
+        }
+
+        function populateAdminList() {
+            document.getElementById('updateTarget').innerHTML =
+                envData.map(i => `<option value="${i.id}">${i.title}</option>`).join('');
+        }
+
+        function saveData() {
+            const id     = document.getElementById('updateTarget').value;
+            const newVal = parseFloat(document.getElementById('newValue').value);
+            const newUnit = document.getElementById('newUnit').value;
+
+            if (!isNaN(newVal)) {
+                envData[id].val = newVal;
+                if (newUnit) envData[id].unit = newUnit;
+                envData[id].history.push(newVal);
+                envData[id].history.shift();
+
+                renderCards(envData);
+                updateOverallBalance();
+                renderPieCharts();   // refresh pies on data change
+                toggleAdmin();
+                document.getElementById('newValue').value = '';
+            }
+        }
+
+        window.onload = initDashboard;
+    </script>
+</body>
+</html>
